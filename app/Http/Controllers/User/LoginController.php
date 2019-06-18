@@ -6,6 +6,7 @@ use App\Model\UserModel;
 use App\User;
 use function FastRoute\TestFixtures\empty_options_cached;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use GuzzleHttp\Client;
 
 class LoginController extends Controller
@@ -32,19 +33,21 @@ class LoginController extends Controller
             return ['msg'=>'邮箱不能为空','code'=>2];
         }
 
-        $u = UserModel::where(['account'=>$account])->first();
+        $u = UserModel::where(['email'=>$email])->first();
         //dd($u);
         if(!$u){
             //
             if($password==$password_confirm){
                 $data = [
                     'account'=>$account,
-                    'password'=>$password,
+                    'password'=>password_hash($password,PASSWORD_BCRYPT),
                     'email'=>$email
                 ];
                 $res = UserModel::insert($data);
                 if($res){
                     return ['msg'=>'注册成功','code'=>1];
+                }else{
+                    return ['msg'=>'注册失败','code'=>2];
                 }
             }else{
                 return ['msg'=>'注册失败','code'=>2];
@@ -58,24 +61,25 @@ class LoginController extends Controller
     //登录
     public function login(Request $request)
     {
-        $account = $request->input('account');
+        $email = $request->input('email');
         $password = $request->input('password');
 
-        if(empty($account)){
+        if(empty($email)){
             return ['msg'=>'账号不能为空','code'=>2];
         }
         if(empty($password)){
             return ['msg'=>'密码不能为空','code'=>2];
         }
 
-        $u = UserModel::where(['account'=>$account])->first();
+        $u = UserModel::where(['email'=>$email])->first();
         if($u){
             //验证密码
             $u = $u->toArray();
-            if($password == $u['password']){
-                return ['msg'=>'登录成功','code'=>1];
-                $data = ['account'=>$account];
-                file_put_contents('1.txt',$data);
+            if( password_verify($password,$u['password']) ){
+                //登陆成功，生成token
+                $token = md5($u['u_id'].Str::random(8).mt_rand(11,99999));
+                echo $token;
+                //return ['msg'=>'登录成功','code'=>1];
             }else{
                 return ['msg'=>'用户名或密码错误','code'=>2];
             }
